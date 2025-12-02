@@ -30,8 +30,14 @@ func InitMongoDB() error {
 		dbName = "blockchain_wallet"
 	}
 
-	// Set client options
-	clientOptions := options.Client().ApplyURI(mongoURI)
+	// Set client options with TLS configuration for production
+	clientOptions := options.Client().
+		ApplyURI(mongoURI).
+		SetMaxPoolSize(10).
+		SetMinPoolSize(2).
+		SetMaxConnIdleTime(30 * time.Second).
+		SetServerSelectionTimeout(30 * time.Second).
+		SetConnectTimeout(30 * time.Second)
 
 	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
