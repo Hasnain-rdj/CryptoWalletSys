@@ -1,0 +1,6 @@
+@echo off
+REM Development server with auto-reload for Windows
+echo Starting Blockchain Wallet Backend with CompileDaemon...
+echo Watching for changes in .go files...
+echo.
+CompileDaemon -command="backend.exe" -build="go build -o backend.exe ." -graceful-kill=true -graceful-timeout=10 -log-prefix=false
