@@ -122,41 +122,48 @@ func CreateTransaction(senderWalletID, receiverWalletID string, amount float64, 
 
 // ValidateTransaction validates a transaction
 func ValidateTransaction(tx models.Transaction) error {
-	// 1. Validate wallet IDs exist
+	// 1. Validate sender wallet ID exists
 	_, err := GetWalletByID(tx.SenderWalletID)
 	if err != nil {
 		return fmt.Errorf("invalid sender wallet ID")
 	}
 
-	_, err = GetWalletByID(tx.ReceiverWalletID)
-	if err != nil {
-		return fmt.Errorf("invalid receiver wallet ID")
+	// 2. For zakat transactions, receiver is system wallet (may not exist in DB)
+	// For regular transactions, validate receiver exists
+	if tx.Type != "zakat_deduction" {
+		_, err = GetWalletByID(tx.ReceiverWalletID)
+		if err != nil {
+			return fmt.Errorf("invalid receiver wallet ID")
+		}
 	}
 
-	// 2. Verify digital signature
-	payload := crypto.CreateTransactionPayload(
-		tx.SenderWalletID,
-		tx.ReceiverWalletID,
-		tx.Amount,
-		tx.Timestamp.String(),
-		tx.Note,
-	)
+	// 3. Skip signature verification for system transactions (zakat)
+	if tx.Type != "zakat_deduction" {
+		// Verify digital signature
+		payload := crypto.CreateTransactionPayload(
+			tx.SenderWalletID,
+			tx.ReceiverWalletID,
+			tx.Amount,
+			tx.Timestamp.String(),
+			tx.Note,
+		)
 
-	publicKey, err := crypto.StringToPublicKey(tx.SenderPublicKey)
-	if err != nil {
-		return fmt.Errorf("invalid public key: %v", err)
+		publicKey, err := crypto.StringToPublicKey(tx.SenderPublicKey)
+		if err != nil {
+			return fmt.Errorf("invalid public key: %v", err)
+		}
+
+		if err := crypto.VerifySignature(payload, tx.Signature, publicKey); err != nil {
+			return fmt.Errorf("invalid signature: %v", err)
+		}
 	}
 
-	if err := crypto.VerifySignature(payload, tx.Signature, publicKey); err != nil {
-		return fmt.Errorf("invalid signature: %v", err)
-	}
-
-	// 3. Validate UTXOs
+	// 4. Validate UTXOs
 	if err := ValidateUTXOs(tx.InputUTXOs); err != nil {
 		return fmt.Errorf("invalid UTXOs: %v", err)
 	}
 
-	// 4. Check if inputs cover outputs
+	// 5. Check if inputs cover outputs
 	inputTotal := 0.0
 	for _, utxoID := range tx.InputUTXOs {
 		utxo, err := GetUTXOByID(utxoID)

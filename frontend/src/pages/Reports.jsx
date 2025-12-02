@@ -12,6 +12,7 @@ const Reports = () => {
   const [zakatHistory, setZakatHistory] = useState([]);
   const [transactionLogs, setTransactionLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [triggeringZakat, setTriggeringZakat] = useState(false);
   const [activeTab, setActiveTab] = useState('zakat'); // zakat, transactions
   const [dateRange, setDateRange] = useState('all'); // all, month, year
 
@@ -90,8 +91,147 @@ const Reports = () => {
   };
 
   const handleDownloadReport = () => {
-    toast.success('Report download feature coming soon!');
-    // In a real implementation, this would generate a PDF or CSV
+    try {
+      let csvContent = '';
+      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDateTime = new Date().toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      
+      if (activeTab === 'zakat') {
+        // Generate Professional Zakat History CSV
+        csvContent = '==================================================\n';
+        csvContent += 'BLOCKCHAIN WALLET - ZAKAT HISTORY REPORT\n';
+        csvContent += '==================================================\n\n';
+        csvContent += `Report Generated: ${currentDateTime}\n`;
+        csvContent += `User: ${userProfile?.fullName || 'N/A'}\n`;
+        csvContent += `Email: ${userProfile?.email || 'N/A'}\n`;
+        csvContent += `Wallet ID: ${userProfile?.walletId || 'N/A'}\n`;
+        csvContent += `Report Period: ${dateRange === 'all' ? 'All Time' : dateRange === 'month' ? 'This Month' : 'This Year'}\n\n`;
+        csvContent += '--------------------------------------------------\n';
+        csvContent += 'ZAKAT DEDUCTION DETAILS\n';
+        csvContent += '--------------------------------------------------\n\n';
+        csvContent += 'Date & Time,Amount (BC),Transaction Hash,Status\n';
+        
+        const filteredData = filterByDateRange(zakatHistory);
+        filteredData.forEach(zakat => {
+          const date = formatDate(zakat.deductedAt);
+          const amount = formatCurrency(zakat.amount);
+          const hash = zakat.transactionHash || 'N/A';
+          const status = (zakat.status || 'completed').toUpperCase();
+          csvContent += `"${date}",${amount},"${hash}",${status}\n`;
+        });
+        
+        csvContent += '\n--------------------------------------------------\n';
+        csvContent += 'SUMMARY\n';
+        csvContent += '--------------------------------------------------\n';
+        csvContent += `Total Zakat Paid:,${formatCurrency(getTotalZakat())} BC\n`;
+        csvContent += `Total Transactions:,${filteredData.length}\n`;
+        csvContent += `Average Deduction:,${filteredData.length > 0 ? formatCurrency(getTotalZakat() / filteredData.length) : '0.00'} BC\n`;
+        csvContent += `Zakat Rate:,2.5%\n\n`;
+        csvContent += '--------------------------------------------------\n';
+        csvContent += 'Note: All zakat deductions are automatically processed\n';
+        csvContent += 'on the 1st of each month at 2.5% of account balance.\n';
+        csvContent += '--------------------------------------------------\n';
+        
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `zakat_history_${currentDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('Zakat history report downloaded!');
+      } else {
+        // Generate Professional Transaction Logs CSV
+        csvContent = '==================================================\n';
+        csvContent += 'BLOCKCHAIN WALLET - TRANSACTION LOGS REPORT\n';
+        csvContent += '==================================================\n\n';
+        csvContent += `Report Generated: ${currentDateTime}\n`;
+        csvContent += `User: ${userProfile?.fullName || 'N/A'}\n`;
+        csvContent += `Email: ${userProfile?.email || 'N/A'}\n`;
+        csvContent += `Wallet ID: ${userProfile?.walletId || 'N/A'}\n`;
+        csvContent += `Report Period: ${dateRange === 'all' ? 'All Time' : dateRange === 'month' ? 'This Month' : 'This Year'}\n\n`;
+        csvContent += '--------------------------------------------------\n';
+        csvContent += 'TRANSACTION LOG DETAILS\n';
+        csvContent += '--------------------------------------------------\n\n';
+        csvContent += 'Date & Time,Event Type,Transaction Hash,Details\n';
+        
+        const filteredData = filterByDateRange(transactionLogs);
+        filteredData.forEach(log => {
+          const date = formatDate(log.timestamp);
+          const eventType = (log.eventType || 'Transaction').toUpperCase();
+          const hash = log.transactionHash || 'N/A';
+          const details = (log.details || 'N/A').replace(/"/g, '""'); // Escape quotes
+          csvContent += `"${date}","${eventType}","${hash}","${details}"\n`;
+        });
+        
+        csvContent += '\n--------------------------------------------------\n';
+        csvContent += 'SUMMARY\n';
+        csvContent += '--------------------------------------------------\n';
+        csvContent += `Total Transaction Logs:,${filteredData.length}\n`;
+        
+        // Count event types
+        const eventTypes = {};
+        filteredData.forEach(log => {
+          const type = log.eventType || 'Transaction';
+          eventTypes[type] = (eventTypes[type] || 0) + 1;
+        });
+        
+        csvContent += '\nEvent Type Breakdown:\n';
+        Object.entries(eventTypes).forEach(([type, count]) => {
+          csvContent += `${type}:,${count}\n`;
+        });
+        
+        csvContent += '\n--------------------------------------------------\n';
+        csvContent += 'Note: All transactions are recorded on the blockchain\n';
+        csvContent += 'and are immutable and cryptographically secure.\n';
+        csvContent += '--------------------------------------------------\n';
+        
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `transaction_logs_${currentDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('Transaction logs report downloaded!');
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
+    }
+  };
+
+  const handleTriggerZakat = async () => {
+    if (!window.confirm('This will deduct 2.5% Zakat from your current balance. Continue?')) {
+      return;
+    }
+
+    try {
+      setTriggeringZakat(true);
+      const res = await api.post('/zakat/deduct');
+      toast.success(res.data.message || 'Zakat deduction processed successfully!');
+      // Refresh reports to show new deduction
+      await fetchReports();
+    } catch (error) {
+      console.error('Error triggering zakat:', error);
+      const errorMsg = error.response?.data?.error || 'Failed to process zakat deduction';
+      toast.error(errorMsg);
+    } finally {
+      setTriggeringZakat(false);
+    }
   };
 
   if (loading) {
@@ -166,14 +306,33 @@ const Reports = () => {
               </select>
             </div>
 
-            {/* Download Button */}
-            <button
-              onClick={handleDownloadReport}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              <Download className="w-4 h-4" />
-              Download Report
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleTriggerZakat}
+                disabled={triggeringZakat}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggeringZakat ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="w-4 h-4" />
+                    Trigger Zakat (Testing)
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleDownloadReport}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                <Download className="w-4 h-4" />
+                Download Report
+              </button>
+            </div>
           </div>
         </div>
 

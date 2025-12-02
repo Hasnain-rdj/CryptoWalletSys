@@ -49,6 +49,9 @@ export const AuthProvider = ({ children }) => {
       const { token, user, privateKey } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      if (privateKey) {
+        localStorage.setItem('privateKey', privateKey);
+      }
       
       setCurrentUser(user);
       setUserProfile(user);
@@ -71,9 +74,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/login', { email, password });
       
-      const { token, user } = response.data;
+      const { token, user, privateKey } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      if (privateKey) {
+        localStorage.setItem('privateKey', privateKey);
+      }
       
       setCurrentUser(user);
       setUserProfile(user);

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"backend/crypto"
 	"backend/middleware"
 	"backend/services"
 	"net/http"
@@ -109,9 +110,10 @@ type LoginRequest struct {
 
 // LoginResponse represents login response
 type LoginResponse struct {
-	User    interface{} `json:"user"`
-	Token   string      `json:"token"`
-	Message string      `json:"message"`
+	User       interface{} `json:"user"`
+	Token      string      `json:"token"`
+	PrivateKey string      `json:"privateKey"`
+	Message    string      `json:"message"`
 }
 
 // Login handles user login
@@ -148,13 +150,22 @@ func Login(c *gin.Context) {
 
 	services.LogSystemEvent("login_success", "User logged in", user.ID, c.ClientIP())
 
+	// Decrypt private key to return to user
+	privateKey, err := crypto.DecryptPrivateKey(user.PrivateKey)
+	if err != nil {
+		services.LogSystemEvent("key_decryption_failure", "Failed to decrypt private key", user.ID, c.ClientIP())
+		// Don't fail login, just don't return the key
+		privateKey = ""
+	}
+
 	// Remove password from response
 	user.Password = ""
 
 	c.JSON(http.StatusOK, LoginResponse{
-		User:    user,
-		Token:   token,
-		Message: "Login successful",
+		User:       user,
+		Token:      token,
+		PrivateKey: privateKey,
+		Message:    "Login successful",
 	})
 }
 
