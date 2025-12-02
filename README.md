@@ -448,6 +448,59 @@ cd frontend
 npm run build
 ```
 
+## 🛠️ Development
+
+### Backend Development
+
+```bash
+cd backend
+
+# Regular mode
+go run main.go
+
+# With auto-reload (using CompileDaemon)
+.\dev.bat
+
+# Or install CompileDaemon globally
+go install github.com/githubnemo/CompileDaemon@latest
+CompileDaemon -command="backend.exe" -build="go build -o backend.exe ." -graceful-kill=true
+```
+
+### Frontend Development
+
+```bash
+cd frontend
+
+# Development server with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Code Structure
+
+**Backend:**
+- `main.go` - Application entry point
+- `config/` - Database connection & indexes
+- `models/` - Data structures
+- `crypto/` - Cryptographic functions
+- `services/` - Business logic layer
+- `handlers/` - HTTP request handlers
+- `middleware/` - Authentication, rate limiting, sanitization
+- `routes/` - API route definitions
+
+**Frontend:**
+- `src/main.jsx` - Entry point
+- `src/App.jsx` - Root component with routing
+- `src/pages/` - Page components
+- `src/components/` - Reusable UI components
+- `src/contexts/` - React context providers
+- `src/utils/` - API client & utilities
+
 ## ⚙️ Configuration
 
 ### Adjust Mining Difficulty
@@ -462,52 +515,241 @@ In `backend/.env`:
 ZAKAT_PERCENTAGE=2.5  # Default 2.5%
 ```
 
-## 📝 Project Requirements Checklist
-
-- ✅ Custom blockchain implementation
-- ✅ Real cryptographic digital signatures
-- ✅ UTXO-based transaction model
-- ✅ Proof-of-Work mining
-- ✅ Wallet ID from public/private keys
-- ✅ Domestic money transfer system
-- ✅ Monthly 2.5% Zakat deduction
-- ✅ System logging and analytics
-- ✅ React + Tailwind frontend
-- ✅ Go backend
-- ✅ Email + OTP verification
-- ✅ User profiles with CNIC
-- ✅ Beneficiary list management
-- ✅ Transaction history
-- ✅ Block explorer
-- ✅ Reports and summaries
-
 ## 🐛 Troubleshooting
 
-### Backend won't start
-- Check MongoDB credentials in `.env`
-- Ensure Go 1.25+ is installed
-- Verify port 8080 is available
+### Backend Issues
 
-### Frontend won't connect
+**MongoDB Connection Failed**
+- Verify MongoDB URI is correct
+- Check network access (whitelist IP in MongoDB Atlas)
+- Ensure database user has read/write permissions
+
+**Port Already in Use**
+- Change PORT in `.env` file
+- Kill process using port: `netstat -ano | findstr :8080`
+
+**Email OTP Not Sending**
+- Verify Gmail app password (16 characters, no spaces)
+- Check SMTP settings in `.env`
+- Enable "Less secure app access" if using regular password (not recommended)
+
+**Mining Too Slow**
+- Reduce `MINING_DIFFICULTY` in `.env` (try 3 or 4)
+- Note: Lower difficulty = faster mining but less secure
+
+### Frontend Issues
+
+**Cannot Connect to Backend**
 - Verify backend is running on port 8080
-- Check VITE_API_URL in frontend `.env`
+- Check `VITE_API_URL` in frontend `.env`
+- Disable browser ad blockers
 - Clear browser cache
 
-### Mining too slow
-- Reduce MINING_DIFFICULTY in backend `.env`
-- Try difficulty 3 or 4 instead of 5
+**Build Errors**
+- Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
+- Clear npm cache: `npm cache clean --force`
 
+**Styling Issues**
+- Ensure Tailwind CSS is properly configured
+- Check `tailwind.config.js` paths
 
-## 👥 Support
+### Common Issues
+
+**Transaction Fails**
+- Ensure sufficient balance (need > amount + fee)
+- Verify recipient wallet ID is valid
+- Check if any transactions are pending
+
+**Balance Not Updating**
+- Refresh the page
+- Check if transaction is confirmed (in a block)
+- Verify UTXO records in database
+
+**New User Has No Balance**
+- This shouldn't happen - new users get 1000 BC automatically
+- Check backend logs for errors during registration
+- Verify UTXO was created: check `utxos` collection
+
+## 🚀 Deployment
+
+### Backend Deployment (Production)
+
+**Build:**
+```bash
+cd backend
+go build -o blockchain-wallet-api main.go
+```
+
+**Run:**
+```bash
+./blockchain-wallet-api
+```
+
+**Environment Variables:**
+- Set `ENVIRONMENT=production`
+- Use strong `JWT_SECRET` (64+ characters)
+- Use production MongoDB cluster
+- Configure proper CORS settings
+
+### Frontend Deployment
+
+**Build:**
+```bash
+cd frontend
+npm run build
+```
+
+**Deploy:**
+- Output directory: `dist/`
+- Deploy to: Vercel, Netlify, AWS S3, etc.
+- Update `VITE_API_URL` to production backend URL
+
+### Docker Deployment (Optional)
+
+Create `backend/Dockerfile`:
+```dockerfile
+FROM golang:1.25-alpine
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -o main .
+EXPOSE 8080
+CMD ["./main"]
+```
+
+Create `frontend/Dockerfile`:
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 5173
+CMD ["npm", "run", "preview"]
+```
+
+## 📝 Testing Guide
+
+### Manual Testing
+
+1. **Registration Flow**
+   - Register with valid email
+   - Receive OTP email
+   - Verify OTP
+   - Save private key
+   - Check initial 1000 BC balance
+
+2. **Transaction Flow**
+   - Send money to another wallet
+   - Verify balance deduction
+   - Check recipient received funds
+   - View transaction in history
+   - Check blockchain explorer
+
+3. **Zakat System**
+   - Wait for monthly deduction (or trigger manually)
+   - Verify 2.5% deducted
+   - Check Zakat history in Reports
+
+### API Testing with cURL
+
+**Register:**
+```bash
+curl -X POST http://localhost:8080/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "Test User",
+    "email": "test@example.com",
+    "cnic": "12345-1234567-1",
+    "password": "Test123"
+  }'
+```
+
+**Login:**
+```bash
+curl -X POST http://localhost:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "Test123"
+  }'
+```
+
+**Get Balance:**
+```bash
+curl http://localhost:8080/api/balance \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 📝 Project Requirements Checklist
+
+- ✅ Custom blockchain implementation with PoW
+- ✅ Real cryptographic digital signatures (RSA-2048)
+- ✅ UTXO-based transaction model
+- ✅ SHA-256 hashing & Merkle trees
+- ✅ Wallet ID from public/private keys
+- ✅ Domestic money transfer system
+- ✅ Initial balance (1000 BC) for new users
+- ✅ Monthly 2.5% Zakat deduction
+- ✅ System logging and analytics
+- ✅ Email OTP verification
+- ✅ User profiles with CNIC
+- ✅ Beneficiary list management
+- ✅ Transaction history with filtering
+- ✅ Block explorer
+- ✅ Reports and summaries
+- ✅ Modern React UI with animations
+- ✅ Responsive design
+- ✅ Security features (encryption, JWT, rate limiting)
+- ✅ MongoDB database
+- ✅ RESTful API with 31 endpoints
+
+## 🤝 Contributing
+
+This is an educational project. Feel free to fork and enhance!
+
+## 📧 Support
 
 For issues or questions:
-1. Check troubleshooting section
-2. Check environment variables
-3. Verify all dependencies are installed
+1. Check [Troubleshooting](#-troubleshooting) section
+2. Review environment variable setup
+3. Verify MongoDB and SMTP configuration
+4. Check backend logs for errors
 
 ## 📄 License
 
-Educational project for academic purposes.
+MIT License - Educational purposes
+
+## 🙏 Acknowledgments
+
+Built with:
+- Go & Gin framework
+- React & Vite
+- MongoDB Atlas
+- Tailwind CSS
+- Lucide Icons
 
 ---
+
+**⚠️ Important Notes:**
+- This is an educational project demonstrating blockchain concepts
+- Save your private key securely - it cannot be recovered if lost
+- For production use, implement additional security measures
+- Regularly backup your MongoDB database
+- Monitor server logs and performance
+
+**🎓 Learning Outcomes:**
+- Blockchain fundamentals & consensus algorithms
+- Cryptography (RSA, AES, SHA-256, digital signatures)
+- UTXO transaction model
+- RESTful API design
+- React state management
+- MongoDB database design
+- Modern UI/UX with animations
+
+---
+
+Made with ❤️ for Blockchain & Cryptocurrency learning
 

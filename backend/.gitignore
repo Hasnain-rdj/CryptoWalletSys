@@ -1,8 +1,10 @@
-# Environment variables
+# Environment variables (NEVER commit these)
 .env
 .env.local
+.env.production
+.env.development
 
-# Go
+# Go binaries and build artifacts
 *.exe
 *.exe~
 *.dll
@@ -11,30 +13,73 @@
 *.test
 *.out
 go.work
+go.work.sum
 
-# Vendor
-vendor/
-
-# Build
+# Build output
+backend
+blockchain-wallet-api
+wallet-api
 bin/
 dist/
 build/
+*.app
 
-# IDE
+# Vendor dependencies
+vendor/
+
+# Credentials and secrets (NEVER commit these)
+firebase-adminsdk.json
+serviceAccountKey.json
+*.pem
+*.key
+private-keys/
+credentials/
+
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
-# OS
+# OS-specific files
 .DS_Store
 Thumbs.db
+desktop.ini
+*.bak
 
-# Logs
+# Logs and databases
 *.log
 logs/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
-# Firebase
-firebase-adminsdk.json
-serviceAccountKey.json
+# Temporary files
+*.tmp
+tmp/
+temp/
+*.cache
+
+# Test coverage
+coverage.txt
+coverage.html
+coverage.out
+
+# Debug files
+debug.log
+debug/
+
+# Air (live reload) temporary files
+.air.toml
+
+# Keep these files for deployment
+!.env.example
+!README.md
+!go.mod
+!go.sum
