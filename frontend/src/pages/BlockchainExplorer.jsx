@@ -35,7 +35,9 @@ const BlockchainExplorer = () => {
     try {
       setLoading(true);
       const res = await api.get('/blockchain');
-      const blocksData = res.data?.blocks || res.data || [];
+      console.log('Blockchain API Response:', res.data);
+      const blocksData = res.data?.blockchain || res.data?.blocks || res.data || [];
+      console.log('Extracted blocks:', blocksData);
       setBlocks(Array.isArray(blocksData) ? blocksData : []);
     } catch (error) {
       console.error('Error fetching blocks:', error);
@@ -48,8 +50,9 @@ const BlockchainExplorer = () => {
 
   const fetchBlockByHash = async (hash) => {
     try {
-      const res = await api.get(`/block/${hash}`);
-      setSelectedBlock(res.data);
+      const res = await api.get(`/block/hash/${hash}`);
+      const blockData = res.data?.block || res.data;
+      setSelectedBlock(blockData);
     } catch (error) {
       console.error('Error fetching block:', error);
       toast.error('Block not found');

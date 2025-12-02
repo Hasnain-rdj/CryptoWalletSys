@@ -34,13 +34,15 @@ const TransactionDetails = () => {
     try {
       // Fetch transaction
       const txRes = await api.get(`/transaction/${hash}`);
-      setTransaction(txRes.data);
+      const txData = txRes.data?.transaction || txRes.data;
+      setTransaction(txData);
 
       // Fetch block if transaction has blockHash
-      if (txRes.data.blockHash) {
+      if (txData.blockHash) {
         try {
-          const blockRes = await api.get(`/block/${txRes.data.blockHash}`);
-          setBlock(blockRes.data);
+          const blockRes = await api.get(`/block/hash/${txData.blockHash}`);
+          const blockData = blockRes.data?.block || blockRes.data;
+          setBlock(blockData);
         } catch (error) {
           console.error('Error fetching block:', error);
         }

@@ -28,12 +28,16 @@ const Reports = () => {
       setLoading(true);
       // Fetch Zakat History
       const zakatRes = await api.get('/zakat/history');
+      console.log('Zakat API Response:', zakatRes.data);
       const zakatData = zakatRes.data?.history || zakatRes.data || [];
+      console.log('Extracted zakat history:', zakatData);
       setZakatHistory(Array.isArray(zakatData) ? zakatData : []);
 
-      // Fetch Transaction Logs
-      const logsRes = await api.get('/logs/transactions/all');
+      // Fetch Transaction Logs (user-specific endpoint)
+      const logsRes = await api.get('/logs/transactions');
+      console.log('Transaction Logs API Response:', logsRes.data);
       const logsData = logsRes.data?.logs || logsRes.data || [];
+      console.log('Extracted transaction logs:', logsData);
       setTransactionLogs(Array.isArray(logsData) ? logsData : []);
     } catch (error) {
       console.error('Error fetching reports:', error);
